@@ -1,0 +1,126 @@
+---
+title: "E-Commerce Sales Forecasting"
+author: "Chirag Tahiliani"
+date: "2026-10-03"
+output: html_document
+---
+
+## My data
+
+I used quarterly U.S. e-commerce sales from Q4 1999 to Q2 2026. Sales are in millions of dollars. I forecast the next five quarters.
+
+```{r}
+library(fpp2)
+ECOMNSA <- read.csv("ECOMNSA.csv")
+sales <- ts(ECOMNSA$ECOMNSA, start=c(1999,4), frequency=4)
+plot(sales, xlab="Year", ylab="Sales (millions of dollars)")
+```
+
+Sales generally increase over time, with repeated peaks in the fourth quarter.
+
+## Mean forecast
+
+```{r}
+mean_forecast <- meanf(sales,5)
+plot(mean_forecast)
+```
+
+The mean model predicts about 103,214 million dollars every quarter. Older, lower sales pull the average down, so the forecast is much lower than recent sales.
+
+## Naive forecast
+
+```{r}
+naive_forecast <- naive(sales,5)
+plot(naive_forecast)
+```
+
+The naive model repeats the last sales value of 329,530 million dollars. The forecast stays flat and does not show seasonal changes.
+
+## Seasonal naive forecast
+
+```{r}
+snaive_forecast <- snaive(sales,5)
+plot(snaive_forecast)
+```
+
+This model repeats sales from the same quarter in the previous year. It predicts 365,160 million dollars for Q4 2026, matching Q4 2025. It follows the seasonal pattern but does not add growth.
+
+## Five-quarter moving average
+
+```{r}
+MA5 <- ma(sales,order=5)
+plot(MA5)
+```
+
+This smooths the historical sales using a centered five-quarter average. The overall upward trend is easier to see.
+
+## Nine-quarter moving average
+
+```{r}
+MA9 <- ma(sales,order=9)
+plot(MA9)
+```
+
+The nine-quarter average smooths the data more than the five-quarter average. These moving averages use surrounding observations, so they show past patterns and are excluded from the forecast accuracy comparison.
+
+## Holt-Winters forecast
+
+```{r}
+HW_model <- HoltWinters(sales)
+HW_forecast <- forecast(HW_model,h=5)
+plot(HW_forecast)
+```
+
+Holt-Winters includes the sales level, trend, and seasonality. It predicts about 396,191 million dollars for Q4 2026, followed by a drop in Q1 2027. This follows the seasonal pattern in past sales.
+
+## ETS forecast
+
+```{r}
+ets_model <- ets(sales)
+ets_forecast <- forecast.ets(ets_model,h=5)
+plot(ets_forecast)
+```
+
+ETS predicts about 333,699 million dollars for Q3 2026 and 401,817 million dollars for Q4 2026. The forecast shows a fourth-quarter peak, similar to the historical sales pattern.
+
+## All models in one chart
+
+```{r}
+plot(mean_forecast, ylim=c(0,450000),
+     main="E-Commerce Sales Forecasts",
+     xlab="Year", ylab="Sales (millions of dollars)")
+lines(naive_forecast$mean,col="orange")
+lines(snaive_forecast$mean,col="maroon")
+lines(MA5,col="gray")
+lines(MA9,col="green")
+lines(HW_forecast$mean,col="purple")
+lines(ets_forecast$mean,col="red")
+```
+
+The moving averages cover past sales. The five forecast models extend into future quarters. Holt-Winters and ETS both show growth and seasonal peaks.
+
+## Forecast accuracy
+
+```{r}
+accuracy(mean_forecast)
+accuracy(naive_forecast)
+accuracy(snaive_forecast)
+accuracy(HW_forecast)
+accuracy(ets_forecast)
+```
+
+## Comparing RMSE
+
+I chose root mean squared error (RMSE). Lower RMSE means smaller errors overall. It is measured in millions of dollars, like the sales data.
+
+```{r}
+accuracy(mean_forecast)[1,"RMSE"]
+accuracy(naive_forecast)[1,"RMSE"]
+accuracy(snaive_forecast)[1,"RMSE"]
+accuracy(HW_forecast)[1,"RMSE"]
+accuracy(ets_forecast)[1,"RMSE"]
+```
+
+ETS has the lowest RMSE at about 6,140.08 million dollars. Holt-Winters is next at about 6,748.52 million dollars. Based on this RMSE comparison, I would choose ETS for this dataset.
+
+These are training errors from the historical data. The models use slightly different starting periods, and this is not a test of future forecast accuracy.
